@@ -1,3 +1,3 @@
 export default {
-  base: "/repo-name/",
+  base: "/child-height-predictor/",
 };
