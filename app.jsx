@@ -1,39 +1,22 @@
-const { useState, useEffect } = React;
-
-// Lucide Icons の代替実装
-const TrendingUp = ({ size = 24, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-    <polyline points="17 6 23 6 23 12"></polyline>
-  </svg>
-);
-
-const Calculator = ({ size = 24, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-    <line x1="8" y1="6" x2="16" y2="6"></line>
-    <line x1="16" y1="14" x2="16" y2="18"></line>
-    <line x1="8" y1="14" x2="8" y2="18"></line>
-    <line x1="12" y1="14" x2="12" y2="18"></line>
-  </svg>
-);
-
-const Info = ({ size = 24, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="12" y1="16" x2="12" y2="12"></line>
-    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-  </svg>
-);
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Calculator, Info } from 'lucide-react';
 
 const ChildHeightPredictor = () => {
   const [gender, setGender] = useState('male');
+  const [inputMode, setInputMode] = useState('year'); // 'year' or 'week'
+  
+  // 年月日入力
   const [ageYears, setAgeYears] = useState('');
   const [ageMonths, setAgeMonths] = useState('');
   const [ageDays, setAgeDays] = useState('');
+  
+  // 週日入力
+  const [ageWeeks, setAgeWeeks] = useState('');
+  const [ageWeekDays, setAgeWeekDays] = useState('');
+  
   const [currentHeight, setCurrentHeight] = useState('');
   const [customMonths, setCustomMonths] = useState('6');
-  const [weekDisplay, setWeekDisplay] = useState('');
+  const [convertedAge, setConvertedAge] = useState('');
   const [results, setResults] = useState(null);
   const [info, setInfo] = useState(null);
 
@@ -60,35 +43,47 @@ const ChildHeightPredictor = () => {
     return 6.0;
   };
 
-  // 日数を含めた総月齢を計算（小数）
-  const getTotalMonthsWithDays = () => {
-    const years = parseInt(ageYears) || 0;
-    const months = parseInt(ageMonths) || 0;
-    const days = parseInt(ageDays) || 0;
-    return years * 12 + months + (days / 30.44); // 平均的な1ヶ月の日数
+  // 総月齢を計算
+  const getTotalMonths = () => {
+    if (inputMode === 'year') {
+      const years = parseInt(ageYears) || 0;
+      const months = parseInt(ageMonths) || 0;
+      const days = parseInt(ageDays) || 0;
+      return years * 12 + months + (days / 30.44);
+    } else {
+      const weeks = parseInt(ageWeeks) || 0;
+      const days = parseInt(ageWeekDays) || 0;
+      const totalDays = weeks * 7 + days;
+      return totalDays / 30.44;
+    }
   };
 
+  // 年齢表示の更新
   useEffect(() => {
-    const years = parseInt(ageYears) || 0;
-    const months = parseInt(ageMonths) || 0;
-    const days = parseInt(ageDays) || 0;
-    const totalDays = years * 365.25 + months * 30.44 + days;
-    const totalMonths = Math.floor(totalDays / 30.44);
-    
-    if (totalMonths > 11) {
-      setWeekDisplay('');
-      return;
-    }
-    
-    const totalWeeks = Math.floor(totalDays / 7);
-    const remainingDays = Math.round(totalDays % 7);
-    
-    if (remainingDays === 0) {
-      setWeekDisplay(`(約${totalWeeks}週)`);
+    if (inputMode === 'year') {
+      const years = parseInt(ageYears) || 0;
+      const months = parseInt(ageMonths) || 0;
+      const days = parseInt(ageDays) || 0;
+      const totalDays = years * 365.25 + months * 30.44 + days;
+      const weeks = Math.floor(totalDays / 7);
+      const remainDays = Math.round(totalDays % 7);
+      setConvertedAge(`(約${weeks}週${remainDays}日)`);
     } else {
-      setWeekDisplay(`(約${totalWeeks}週${remainingDays}日)`);
+      const weeks = parseInt(ageWeeks) || 0;
+      const days = parseInt(ageWeekDays) || 0;
+      const totalDays = weeks * 7 + days;
+      const years = Math.floor(totalDays / 365.25);
+      const remainDaysAfterYears = totalDays - (years * 365.25);
+      const months = Math.floor(remainDaysAfterYears / 30.44);
+      const remainDays = Math.round(remainDaysAfterYears - (months * 30.44));
+      
+      let ageStr = '';
+      if (years > 0) ageStr += `${years}歳`;
+      if (months > 0) ageStr += `${months}ヶ月`;
+      if (remainDays > 0) ageStr += `${remainDays}日`;
+      setConvertedAge(ageStr ? `(約${ageStr})` : '');
     }
-  }, [ageYears, ageMonths, ageDays]);
+  }, [inputMode, ageYears, ageMonths, ageDays, ageWeeks, ageWeekDays]);
 
   const interpolate = (x, x1, y1, x2, y2) => {
     if (x1 === x2) return y1;
@@ -114,6 +109,15 @@ const ChildHeightPredictor = () => {
     }
     
     return interpolate(months, lower, data[lower], upper, data[upper]);
+  };
+
+  // 90%範囲の計算（平均±1.645SD）
+  const get90PercentRange = (gender, months) => {
+    const avg = getAverageHeight(gender, months);
+    const sd = getStandardDeviation(months);
+    const lower = avg - (1.645 * sd);
+    const upper = avg + (1.645 * sd);
+    return { lower: lower.toFixed(1), upper: upper.toFixed(1) };
   };
 
   const getHeightDifference = (gender, currentMonths, currentHeight) => {
@@ -156,9 +160,6 @@ const ChildHeightPredictor = () => {
   };
 
   const calculatePrediction = () => {
-    const years = parseInt(ageYears) || 0;
-    const months = parseInt(ageMonths) || 0;
-    const days = parseInt(ageDays) || 0;
     const height = parseFloat(currentHeight);
     const predictionMonths = parseInt(customMonths) || 6;
     
@@ -172,7 +173,7 @@ const ChildHeightPredictor = () => {
       return;
     }
     
-    const totalMonths = getTotalMonthsWithDays();
+    const totalMonths = getTotalMonths();
     
     if (totalMonths > 216) {
       alert('18歳以下のお子様の情報を入力してください');
@@ -185,18 +186,27 @@ const ChildHeightPredictor = () => {
     const customPeriodHeight = predictHeight(gender, totalMonths, height, totalMonths + predictionMonths);
     const oneYearHeight = predictHeight(gender, totalMonths, height, totalMonths + 12);
     
-    const currentAvg = getAverageHeight(gender, totalMonths);
-    const deviation = height - currentAvg;
+    const heightRange = get90PercentRange(gender, totalMonths);
     
     let ageDisplay = '';
-    if (years > 0) {
-      ageDisplay = `${years}歳${months}ヶ月`;
-      if (days > 0) ageDisplay += `${days}日`;
-    } else if (months > 0) {
-      ageDisplay = `${months}ヶ月`;
-      if (days > 0) ageDisplay += `${days}日`;
+    if (inputMode === 'year') {
+      const years = parseInt(ageYears) || 0;
+      const months = parseInt(ageMonths) || 0;
+      const days = parseInt(ageDays) || 0;
+      if (years > 0) {
+        ageDisplay = `${years}歳${months}ヶ月`;
+        if (days > 0) ageDisplay += `${days}日`;
+      } else if (months > 0) {
+        ageDisplay = `${months}ヶ月`;
+        if (days > 0) ageDisplay += `${days}日`;
+      } else {
+        ageDisplay = `${days}日`;
+      }
     } else {
-      ageDisplay = `${days}日`;
+      const weeks = parseInt(ageWeeks) || 0;
+      const days = parseInt(ageWeekDays) || 0;
+      ageDisplay = `${weeks}週`;
+      if (days > 0) ageDisplay += `${days}日`;
     }
     
     setResults({
@@ -205,8 +215,8 @@ const ChildHeightPredictor = () => {
       oneYear: oneYearHeight.toFixed(1),
       currentAge: ageDisplay,
       currentHeight: height.toFixed(1),
-      currentAvg: currentAvg.toFixed(1),
-      deviation: deviation.toFixed(1)
+      heightRangeLower: heightRange.lower,
+      heightRangeUpper: heightRange.upper
     });
   };
 
@@ -220,7 +230,10 @@ const ChildHeightPredictor = () => {
           </div>
           
           <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-6">
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-blue-800 mb-2">
+              数ヶ月後と1年後の身長を予測して表示するアプリです
+            </p>
+            <p className="text-xs text-blue-700">
               日本人の成長曲線データ(厚生労働省)に基づいて予測します
             </p>
           </div>
@@ -256,52 +269,117 @@ const ChildHeightPredictor = () => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                現在の年齢(0〜18歳) {weekDisplay && <span className="text-indigo-600">{weekDisplay}</span>}
+                年齢入力方法
               </label>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="18"
-                      value={ageYears}
-                      onChange={(e) => setAgeYears(e.target.value)}
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
-                    />
-                    <span className="absolute right-4 top-3 text-gray-500">歳</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="11"
-                      value={ageMonths}
-                      onChange={(e) => setAgeMonths(e.target.value)}
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
-                    />
-                    <span className="absolute right-4 top-3 text-gray-500">ヶ月</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="30"
-                      value={ageDays}
-                      onChange={(e) => setAgeDays(e.target.value)}
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
-                    />
-                    <span className="absolute right-4 top-3 text-gray-500">日</span>
-                  </div>
-                </div>
+              <div className="flex gap-4 mb-3">
+                <button
+                  onClick={() => setInputMode('year')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                    inputMode === 'year'
+                      ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500'
+                      : 'bg-gray-50 text-gray-600 border-2 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  年月日で入力
+                </button>
+                <button
+                  onClick={() => setInputMode('week')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                    inputMode === 'week'
+                      ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500'
+                      : 'bg-gray-50 text-gray-600 border-2 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  週日で入力
+                </button>
               </div>
+
+              {inputMode === 'year' ? (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-2">
+                    現在の年齢 {convertedAge && <span className="text-indigo-600">{convertedAge}</span>}
+                  </label>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="18"
+                          value={ageYears}
+                          onChange={(e) => setAgeYears(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                        />
+                        <span className="absolute right-4 top-3 text-gray-500">歳</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="11"
+                          value={ageMonths}
+                          onChange={(e) => setAgeMonths(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                        />
+                        <span className="absolute right-4 top-3 text-gray-500">ヶ月</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="30"
+                          value={ageDays}
+                          onChange={(e) => setAgeDays(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                        />
+                        <span className="absolute right-4 top-3 text-gray-500">日</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-2">
+                    現在の年齢 {convertedAge && <span className="text-indigo-600">{convertedAge}</span>}
+                  </label>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          value={ageWeeks}
+                          onChange={(e) => setAgeWeeks(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                        />
+                        <span className="absolute right-4 top-3 text-gray-500">週</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="6"
+                          value={ageWeekDays}
+                          onChange={(e) => setAgeWeekDays(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                        />
+                        <span className="absolute right-4 top-3 text-gray-500">日</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -372,14 +450,8 @@ const ChildHeightPredictor = () => {
                   
                   <div className="bg-white rounded-lg p-3 mb-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">同年齢の平均身長</span>
-                      <span className="font-semibold">{results.currentAvg} cm</span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-1">
-                      <span className="text-gray-600">平均との差</span>
-                      <span className={`font-semibold ${parseFloat(results.deviation) >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                        {parseFloat(results.deviation) >= 0 ? '+' : ''}{results.deviation} cm
-                      </span>
+                      <span className="text-gray-600">同年齢の90%の子の身長</span>
+                      <span className="font-semibold text-indigo-700">{results.heightRangeLower}〜{results.heightRangeUpper} cm</span>
                     </div>
                   </div>
                   
@@ -410,4 +482,4 @@ const ChildHeightPredictor = () => {
   );
 };
 
-ReactDOM.render(<ChildHeightPredictor />, document.getElementById('root'));
+export default ChildHeightPredictor;
